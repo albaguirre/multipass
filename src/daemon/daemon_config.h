@@ -46,11 +46,13 @@ struct DaemonConfig
     const std::unique_ptr<NameGenerator> name_generator;
     const std::unique_ptr<SSHKeyProvider> ssh_key_provider;
     const std::unique_ptr<CertProvider> cert_provider;
+    const std::unique_ptr<CertProvider> pub_cert_provider;
     const std::unique_ptr<CertStore> client_cert_store;
     const std::shared_ptr<logging::Logger> logger;
     const multipass::Path cache_directory;
     const multipass::Path data_directory;
     const std::string server_address;
+    const std::string pub_server_address;
     const std::string ssh_username;
     const RpcConnectionType connection_type;
     const std::chrono::hours image_refresh_timer;
@@ -65,11 +67,13 @@ struct DaemonConfigBuilder
     std::unique_ptr<NameGenerator> name_generator;
     std::unique_ptr<SSHKeyProvider> ssh_key_provider;
     std::unique_ptr<CertProvider> cert_provider;
+    std::unique_ptr<CertProvider> pub_cert_provider;
     std::unique_ptr<CertStore> client_cert_store;
     std::unique_ptr<logging::Logger> logger;
     multipass::Path cache_directory;
     multipass::Path data_directory;
     std::string server_address;
+    std::string pub_server_address;
     std::string ssh_username;
     multipass::days days_to_expire{14};
     std::chrono::hours image_refresh_timer{6};

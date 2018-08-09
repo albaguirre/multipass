@@ -26,6 +26,7 @@
 #include <multipass/name_generator.h>
 #include <multipass/platform.h>
 #include <multipass/query.h>
+#include <multipass/registration_allowed.h>
 #include <multipass/ssh/ssh_session.h>
 #include <multipass/utils.h>
 #include <multipass/version.h>
@@ -394,7 +395,8 @@ auto connect_rpc(mp::DaemonRpc& rpc, mp::Daemon& daemon)
 mp::Daemon::Daemon(std::unique_ptr<const DaemonConfig> the_config)
     : config{std::move(the_config)},
       vm_instance_specs{load_db(config->data_directory, config->cache_directory)},
-      daemon_rpc{config->server_address, config->connection_type, *config->cert_provider, *config->client_cert_store},
+      daemon_rpc{config->server_address, config->connection_type, RegistrationAllowed::yes, *config->cert_provider,
+                 *config->client_cert_store},
       metrics_provider{"https://api.staging.jujucharms.com/omnibus/v4/multipass/metrics",
                        get_unique_id(config->data_directory), config->data_directory},
       metrics_opt_in{get_metrics_opt_in(config->data_directory)}
@@ -493,7 +495,9 @@ mp::Daemon::Daemon(std::unique_ptr<const DaemonConfig> the_config)
             mpl::log(mpl::Level::error, category, fmt::format("Error updating images: {}", e.what()));
         }
     });
+
     source_images_maintenance_task.start(config->image_refresh_timer);
+    start_public_rpc();
 }
 
 grpc::Status mp::Daemon::launch(grpc::ServerContext* context, const LaunchRequest* request,
@@ -1495,6 +1499,7 @@ grpc::Status mp::Daemon::registr(grpc::ServerContext* context, const RegisterReq
 try // clang-format on
 {
     config->client_cert_store->add_cert(request->cert());
+    start_public_rpc();
     return grpc::Status::OK;
 }
 catch (const std::exception& e)
@@ -1627,4 +1632,16 @@ void mp::Daemon::start_mount(const VirtualMachine::UPtr& vm, const std::string& 
                      [this, name, target_path]() { mount_threads[name].erase(target_path); });
 
     mount_threads[name][target_path] = std::move(sshfs_mount);
+}
+
+void mp::Daemon::start_public_rpc()
+{
+    auto cert_chain = config->client_cert_store->PEM_cert_chain();
+    if (!config->pub_server_address.empty() && !cert_chain.empty())
+    {
+        public_daemon_rpc = std::make_unique<DaemonRpc>(
+            config->pub_server_address, RpcConnectionType::ssl_accept_only_known_clients, RegistrationAllowed::no,
+            *config->pub_cert_provider, *config->client_cert_store);
+        connect_rpc(*public_daemon_rpc, *this);
+    }
 }

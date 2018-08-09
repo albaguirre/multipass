@@ -110,6 +110,7 @@ private:
     void start_mount(const VirtualMachine::UPtr& vm, const std::string& name, const std::string& source_path,
                      const std::string& target_path, const std::unordered_map<int, int>& gid_map,
                      const std::unordered_map<int, int>& uid_map);
+    void start_public_rpc();
     std::unique_ptr<const DaemonConfig> config;
     std::unordered_map<std::string, VMSpecs> vm_instance_specs;
     std::unordered_map<std::string, VirtualMachine::UPtr> vm_instances;
@@ -120,6 +121,7 @@ private:
     QTimer source_images_maintenance_task;
     MetricsProvider metrics_provider;
     MetricsOptInData metrics_opt_in;
+    std::unique_ptr<DaemonRpc> public_daemon_rpc;
 };
 } // namespace multipass
 #endif // MULTIPASS_DAEMON_H
